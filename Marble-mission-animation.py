@@ -160,33 +160,32 @@ def generate_fun_summary(total_time_sec, n_marbles):
 # ------------------------------------------------
 # Main
 # ------------------------------------------------
-if __name__ == "__main__":
-    try:
-        n_marbles = int(user_marble_count)
-    except:
-        n_marbles = 10
-        print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
+try:
+    n_marbles = int(user_marble_count)
+except:
+    n_marbles = 10
+    print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
 
-    D = 384400000    # Target distance in metres
-    dt = 1000
-    R0 = 0.75
-    beta = 0.05
-    m = 0.005
-    u = 10.0
-    M_dry = 1000.0
-    R_threshold = 0.5
-    tau = 30.0
+D = 384400000    # Target distance in metres
+dt = 1000
+R0 = 0.75
+beta = 0.05
+m = 0.005
+u = 10.0
+M_dry = 1000.0
+R_threshold = 0.5
+tau = 30.0
 
-    M0 = compute_mass_from_marbles(n_marbles, m, M_dry)
-    t_vals, x_vals, v_vals, a_vals, M_vals = simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau)
+M0 = compute_mass_from_marbles(n_marbles, m, M_dry)
+t_vals, x_vals, v_vals, a_vals, M_vals = simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau)
 
-    total_time = t_vals[-1]
-    final_distance_km = x_vals[-1] / 1000
-    final_velocity = v_vals[-1]
+total_time = t_vals[-1]
+final_distance_km = x_vals[-1] / 1000
+final_velocity = v_vals[-1]
 
-    print(f"\nTotal time taken to get home: {total_time:.2f} seconds")
-    print(f"\nFinal velocity reached: {final_velocity:.2f} m/s")
+print(f"\nTotal time taken to get home: {total_time:.2f} seconds")
+print(f"\nFinal velocity reached: {final_velocity:.2f} m/s")
 
-    generate_fun_summary(total_time, n_marbles)
+generate_fun_summary(total_time, n_marbles)
 
-    print("\n🎬 Animation available below.")
+print("\n🎬 Animation available below.")
