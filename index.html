@@ -7,14 +7,17 @@
     body {
         background: url('space-background.jpg') no-repeat center center fixed;
         background-size: cover;
+        background-color: #000; /* fallback for slow loads */
         color: #f0f0f0;
         font-family: 'Segoe UI', sans-serif;
         text-align: center;
         padding-bottom: 50px;
+        margin: 0;
+        min-height: 100vh;
     }
 
     h1, h2 {
-        color: #fff;
+        color: #ffffff;
         text-shadow: 0 0 10px #0ff;
     }
 
@@ -57,7 +60,6 @@
         border-radius: 12px;
         box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
     }
-
 </style>
 
 </head>
