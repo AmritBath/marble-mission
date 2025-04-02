@@ -1,1 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>My Python App via Pyodide</title>
+</head>
+<body>
 
+    <h1>Enter the number of marbles</h1>
+    <input type="text" id="marbleInput" placeholder="Enter a number" />
+    <button onclick="runPython()">Run Python Code</button>
+
+    <h2>Output:</h2>
+    <pre id="outputArea"></pre>
+
+    <!-- 1) Load Pyodide -->
+    <script src="https://cdn.jsdelivr.net/pyodide/v0.22.1/full/pyodide.js"></script>
+
+    <script>
+        // We'll store the Pyodide instance once it's loaded
+        let pyodide;
+
+        // A function that initialises Pyodide (only called once)
+        async function loadPyodideAndPackages() {
+            pyodide = await loadPyodide({
+                // If you need extra packages, you can specify them in "indexURL"
+                // but for basic usage, the default Pyodide CDN is enough.
+            });
+        }
+
+        // A function to fetch your Python file and run it
+        async function runPython() {
+            // Ensure Pyodide is loaded
+            if (!pyodide) {
+                await loadPyodideAndPackages();
+            }
+
+            // Grab the user input from the text box
+            const marbleCount = document.getElementById('marbleInput').value;
+
+            try {
+                // 2) Fetch the Python code from your .py file
+                const response = await fetch('my_script.py');
+                const pythonCode = await response.text();
+
+                // 3) Set a Python variable to hold user input
+                pyodide.runPython(`user_marble_count = ${marbleCount}`);
+
+                // 4) Run the code
+                // Note: If your Python code uses "print()", we can capture it by
+                // redirecting stdout. We'll do that for demonstration below.
+                let outputText = '';
+
+                // Create a helper to capture print output
+                pyodide.runPython(`
+import io, sys
+
+# We'll set up a buffer to capture 'print' statements
+sys.stdout = io.StringIO()
+`);
+
+                // Now run the user’s Python code
+                pyodide.runPython(pythonCode);
+
+                // Retrieve anything that was printed
+                outputText = pyodide.runPython(`sys.stdout.getvalue()`);
+
+                // 5) Display the result in the page
+                document.getElementById('outputArea').textContent = outputText;
+
+            } catch (err) {
+                document.getElementById('outputArea').textContent = 'Error: ' + err;
+            }
+        }
+    </script>
+</body>
+</html>
