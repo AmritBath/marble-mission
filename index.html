@@ -17,18 +17,21 @@
     <script src="https://cdn.jsdelivr.net/pyodide/v0.22.1/full/pyodide.js"></script>
 
     <script>
+        let pyodideReady = false;
         let pyodide;
 
-        // Initialise Pyodide and load required packages
+        // Preload packages when the page first loads
         async function loadPyodideAndPackages() {
             pyodide = await loadPyodide();
             await pyodide.loadPackage(["numpy", "matplotlib", "scipy"]);
+            pyodideReady = true;
         }
 
-        // Run Python code when button is clicked
+        // Run Python code
         async function runPython() {
-            // Load Pyodide and packages if not already loaded
-            if (!pyodide) {
+            // Wait for Pyodide to finish loading if needed
+            if (!pyodideReady) {
+                document.getElementById('outputArea').textContent = "Loading Python environment...";
                 await loadPyodideAndPackages();
             }
 
@@ -41,32 +44,26 @@
             }
 
             try {
-                // Fetch the Python script
                 const response = await fetch('Marble-mission-animation.py');
                 const pythonCode = await response.text();
 
-                // Set user input as a Python variable
                 pyodide.runPython(`user_marble_count = ${marbleCount}`);
-
-                // Redirect stdout to capture print output
                 pyodide.runPython(`
 import io, sys
 sys.stdout = io.StringIO()
                 `);
-
-                // Run the actual Python code
                 pyodide.runPython(pythonCode);
 
-                // Get printed output
                 const outputText = pyodide.runPython(`sys.stdout.getvalue()`);
-
-                // Display it on the page
                 document.getElementById('outputArea').textContent = outputText;
 
             } catch (err) {
                 document.getElementById('outputArea').textContent = 'Error: ' + err;
             }
         }
+
+        // Load Pyodide & packages on initial page load
+        loadPyodideAndPackages();
     </script>
 </body>
 </html>
