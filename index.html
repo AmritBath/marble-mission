@@ -13,6 +13,13 @@
     <h2>Output:</h2>
     <pre id="outputArea"></pre>
 
+    <!-- 🎬 Embedded Rocket Animation -->
+    <h2>Rocket Animation</h2>
+    <video width="640" height="360" controls>
+        <source src="rocket-video.mov" type="video/quicktime">
+        Your browser does not support the video tag.
+    </video>
+
     <!-- Load Pyodide -->
     <script src="https://cdn.jsdelivr.net/pyodide/v0.22.1/full/pyodide.js"></script>
 
@@ -20,16 +27,13 @@
         let pyodideReady = false;
         let pyodide;
 
-        // Preload packages when the page first loads
         async function loadPyodideAndPackages() {
             pyodide = await loadPyodide();
             await pyodide.loadPackage(["numpy", "matplotlib", "scipy"]);
             pyodideReady = true;
         }
 
-        // Run Python code
         async function runPython() {
-            // Wait for Pyodide to finish loading if needed
             if (!pyodideReady) {
                 document.getElementById('outputArea').textContent = "Loading Python environment...";
                 await loadPyodideAndPackages();
@@ -62,7 +66,6 @@ sys.stdout = io.StringIO()
             }
         }
 
-        // Load Pyodide & packages on initial page load
         loadPyodideAndPackages();
     </script>
 </body>
