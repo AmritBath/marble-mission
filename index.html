@@ -44,7 +44,8 @@
                 const pythonCode = await response.text();
 
                 // 3) Set a Python variable to hold user input
-                pyodide.runPython(`user_marble_count = ${marbleCount}`);
+                pyodide.runPython(`user_marble_count = int(${JSON.stringify(marbleCount)})`);
+
 
                 // 4) Run the code
                 // Note: If your Python code uses "print()", we can capture it by
