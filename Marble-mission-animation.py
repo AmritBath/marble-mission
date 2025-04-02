@@ -1,10 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-from matplotlib.offsetbox import OffsetImage, AnnotationBbox
-import matplotlib.image as mpimg
-from IPython.display import HTML, display
-from scipy.ndimage import rotate
 import random
 
 # ------------------------------------------------
@@ -93,7 +87,6 @@ def simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
     state = np.array([0.0, 0.0, M0])
     all_t, all_x, all_v, all_a, all_M = [], [], [], [], []
     while state[0] < D:
-        # If mass has dropped to "dry mass," just move at the final velocity
         if state[2] <= M_dry + 1e-9:
             while state[0] < D:
                 all_t.append(t_total)
@@ -105,22 +98,19 @@ def simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
                 t_total += dt
             break
 
-        # Throwing phase
         state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
             throwing_phase(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D)
-
         all_t.extend(t_vals)
         all_x.extend(x_vals)
         all_v.extend(v_vals)
         all_a.extend(a_vals)
         all_M.extend(M_vals)
+
         if state[0] >= D:
             break
 
-        # Resting phase
         state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
             resting_phase(state, t_total, dt, tau, D)
-
         all_t.extend(t_vals)
         all_x.extend(x_vals)
         all_v.extend(v_vals)
@@ -130,43 +120,6 @@ def simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
     return np.array(all_t), np.array(all_x), np.array(all_v), np.array(all_a), np.array(all_M)
 
 # ------------------------------------------------
-# Rocket animation
-# ------------------------------------------------
-def animate_rocket(distance):
-    fig, ax = plt.subplots(figsize=(10, 5))
-    ax.set_xlim(0, distance)
-    ax.set_ylim(-1, 1)
-    ax.set_yticks([])
-    ax.set_xlabel("Distance Travelled (m)")
-    ax.set_title("🚀 Rocket Progress")
-
-    # Background
-    try:
-        space_bg = mpimg.imread("space.jpg")
-    except:
-        space_bg = np.ones((10, 10, 3)) * 0.05
-    ax.imshow(space_bg, extent=[0, distance, -2, 2], aspect='auto', zorder=0)
-
-    # Rocket image
-    try:
-        rocket_img = mpimg.imread("rocket.png")
-        imagebox = OffsetImage(rocket_img, zoom=0.1)
-        ab = AnnotationBbox(imagebox, (0, 0), frameon=False)
-        ax.add_artist(ab)
-    except:
-        ab = None
-
-    def update(frame):
-        new_x = frame * (distance / 100)
-        if ab:
-            ab.xybox = (new_x, 0)
-        return (ab,) if ab else ()
-
-    ani = animation.FuncAnimation(fig, update, frames=100, blit=True, interval=30)
-    plt.close(fig)  # Prevents duplicate static figure output in some environments
-    return HTML(ani.to_jshtml())
-
-# ------------------------------------------------
 # Fun summary generator
 # ------------------------------------------------
 def generate_fun_summary(total_time_sec, n_marbles):
@@ -174,29 +127,17 @@ def generate_fun_summary(total_time_sec, n_marbles):
     hours = int((total_time_sec % (60 * 60 * 24)) // 3600)
 
     fatigue_opts = [
-        "Chill 🧘‍♂️",
-        "Sweaty 💦",
-        "Delirious 😵",
-        "In a trance 🔮",
-        "Running on dreams 🌈",
-        "Throwing with rage 💢"
+        "Chill 🧘‍♂️", "Sweaty 💦", "Delirious 😵", "In a trance 🔮",
+        "Running on dreams 🌈", "Throwing with rage 💢"
     ]
     hunger_opts = [
-        "Mild Munchies 🍪",
-        "Starving 🌌",
-        "Ate the emergency cheese 🧀",
-        "Dreaming of noodles 🍜",
-        "Considering eating a marble 🤔",
+        "Mild Munchies 🍪", "Starving 🌌", "Ate the emergency cheese 🧀",
+        "Dreaming of noodles 🍜", "Considering eating a marble 🤔",
         "Drank recycled tears 💧"
     ]
     friend_opts = [
-        "Marble Henry",
-        "Captain Pebble",
-        "Sir Toss-a-lot",
-        "Orb-Bob",
-        "Commander Bounce",
-        "The Great Sphere",
-        "Smooth Steve"
+        "Marble Henry", "Captain Pebble", "Sir Toss-a-lot", "Orb-Bob",
+        "Commander Bounce", "The Great Sphere", "Smooth Steve"
     ]
     extra_lines = [
         "📦 Cargo: 14 snack bars, 1 diary, 900 regrets",
@@ -217,21 +158,16 @@ def generate_fun_summary(total_time_sec, n_marbles):
         print(line)
 
 # ------------------------------------------------
-# Main entry point
-# (No raw input() usage; we rely on user_marble_count from JS)
+# Main
 # ------------------------------------------------
 if __name__ == "__main__":
-    # 1) Get marbles from the JS variable (already an int if you did runPython("user_marble_count = 123"))
-    #    but we can still cast to int to be safe:
     try:
         n_marbles = int(user_marble_count)
     except:
-        # Fallback if it's not set or invalid
         n_marbles = 10
         print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
 
-    # 2) Simulation parameters
-    D = 384400000    # Just an example large distance
+    D = 384400000    # Target distance in metres
     dt = 1000
     R0 = 0.75
     beta = 0.05
@@ -241,7 +177,6 @@ if __name__ == "__main__":
     R_threshold = 0.5
     tau = 30.0
 
-    # 3) Perform simulation
     M0 = compute_mass_from_marbles(n_marbles, m, M_dry)
     t_vals, x_vals, v_vals, a_vals, M_vals = simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau)
 
@@ -249,12 +184,9 @@ if __name__ == "__main__":
     final_distance_km = x_vals[-1] / 1000
     final_velocity = v_vals[-1]
 
-    # 4) Print summary
     print(f"\nTotal time taken to get home: {total_time:.2f} seconds")
     print(f"\nFinal velocity reached: {final_velocity:.2f} m/s")
 
     generate_fun_summary(total_time, n_marbles)
 
-    # 5) Create & display rocket animation
-    anim_html = animate_rocket(final_distance_km)
-    display(anim_html)
+    print("\n🎬 Animation available below.")
