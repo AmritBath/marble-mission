@@ -1,149 +1,156 @@
 import numpy as np
- import random
+import random
  
- # ------------------------------------------------
- # Constants
- # ------------------------------------------------
- EARTH_MOON_DISTANCE = 384400  # in km
+# ------------------------------------------------
+# Constants
+# ------------------------------------------------
+EARTH_MOON_DISTANCE = 384400  # in km
  
- # ------------------------------------------------
- # Mass calculation from marble count
- # ------------------------------------------------
- def compute_mass_from_marbles(n_marbles, m_per_marble=0.005, M_dry=1000.0):
-     return M_dry + n_marbles * m_per_marble
+# ------------------------------------------------
+# Mass calculation from marble count
+# ------------------------------------------------
+def compute_mass_from_marbles(n_marbles, m_per_marble=0.005, M_dry=1000.0):
+    return M_dry + n_marbles * m_per_marble
  
- # ------------------------------------------------
- # ODE function for the throwing phase
- # ------------------------------------------------
- def throwing_odes(t_phase, state, R0, beta, m, u, M_dry):
-     R = R0 * np.exp(-beta * t_phase)
-     x, v, M = state
-     if M > M_dry:
-         dxdt = v
-         dvdt = (m * R * (u - v)) / M
-         dMdt = -m * R
-     else:
-         dxdt = v
-         dvdt = 0.0
-         dMdt = 0.0
-         dxdt, dvdt, dMdt = v, 0.0, 0.0
-     return np.array([dxdt, dvdt, dMdt])
+# ------------------------------------------------
+# ODE function for the throwing phase
+# ------------------------------------------------
+def throwing_odes(t_phase, state, R0, beta, m, u, M_dry):
+    R = R0 * np.exp(-beta * t_phase)
+    x, v, M = state
+    if M > M_dry:
+        dxdt = v
+        dvdt = (m * R * (u - v)) / M
+        dMdt = -m * R
+    else:
+        dxdt = v
+        dvdt = 0.0
+        dMdt = 0.0
+        dxdt, dvdt, dMdt = v, 0.0, 0.0
+    return np.array([dxdt, dvdt, dMdt])
+
+# ------------------------------------------------
+# RK4 integration step
+# ------------------------------------------------
  
- # ------------------------------------------------
- # RK4 integration step
- # ------------------------------------------------
- def rk4_step(f, t_phase, state, dt, R0, beta, m, u, M_dry):
-     k1 = f(t_phase, state, R0, beta, m, u, M_dry)
-     k2 = f(t_phase + 0.5*dt, state + 0.5*dt*k1, R0, beta, m, u, M_dry)
-     k3 = f(t_phase + 0.5*dt, state + 0.5*dt*k2, R0, beta, m, u, M_dry)
-     k4 = f(t_phase + dt, state + dt*k3, R0, beta, m, u, M_dry)
-     return state + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
+def rk4_step(f, t_phase, state, dt, R0, beta, m, u, M_dry):
+    k1 = f(t_phase, state, R0, beta, m, u, M_dry)
+    k2 = f(t_phase + 0.5*dt, state + 0.5*dt*k1, R0, beta, m, u, M_dry)
+    k3 = f(t_phase + 0.5*dt, state + 0.5*dt*k2, R0, beta, m, u, M_dry)
+    k4 = f(t_phase + dt, state + dt*k3, R0, beta, m, u, M_dry)
+    return state + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
  
- # ------------------------------------------------
- # Throwing phase
- # ------------------------------------------------
- def throwing_phase(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D):
-     local_t = 0.0
-     t_vals, x_vals, v_vals, a_vals, M_vals = [], [], [], [], []
-     while True:
-         R = R0 * np.exp(-beta * local_t)
-         if R < R_threshold or state[2] <= M_dry + 1e-9:
-             break
-         t_vals.append(t_total)
-         x_vals.append(state[0])
-         v_vals.append(state[1])
-         a_vals.append((m * R * (u - state[1])) / state[2] if state[2] > M_dry else 0.0)
-         M_vals.append(state[2])
-         state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
-         local_t += dt
-         t_total += dt
-         if state[0] >= D:
-             break
-     return state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals
  
- # ------------------------------------------------
- # Resting phase
- # ------------------------------------------------
- def resting_phase(state, t_total, dt, tau, D):
-     t_vals, x_vals, v_vals, a_vals, M_vals = [], [], [], [], []
-     t_rest = 0.0
-     while t_rest < tau:
-         t_vals.append(t_total)
-         x_vals.append(state[0])
-         v_vals.append(state[1])
-         a_vals.append(0.0)
-         M_vals.append(state[2])
-         state[0] += state[1] * dt
-         t_total += dt
-         t_rest += dt
-         if state[0] >= D:
-             break
-     return state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals
+# ------------------------------------------------
+# Throwing phase
+# ------------------------------------------------
  
- # ------------------------------------------------
- # Full simulation
- # ------------------------------------------------
- def simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
- def simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
-     t_total = 0.0
-     state = np.array([0.0, 0.0, M0])
-     all_t, all_x, all_v, all_a, all_M = [], [], [], [], []
-     local_t = 0.0
+def throwing_phase(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D):
+    local_t = 0.0
+    t_vals, x_vals, v_vals, a_vals, M_vals = [], [], [], [], []
+    while True:
+        R = R0 * np.exp(-beta * local_t)
+        if R < R_threshold or state[2] <= M_dry + 1e-9:
+            break
+        t_vals.append(t_total)
+        x_vals.append(state[0])
+        v_vals.append(state[1])
+        a_vals.append((m * R * (u - state[1])) / state[2] if state[2] > M_dry else 0.0)
+        M_vals.append(state[2])
+        state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
+        local_t += dt
+        t_total += dt
+        if state[0] >= D:
+            break
+    return state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals
  
-     while state[0] < D:
-         if state[2] <= M_dry + 1e-9:
-             while state[0] < D:
-                 all_t.append(t_total)
-                 all_x.append(state[0])
-                 all_v.append(state[1])
-                 all_a.append(0.0)
-                 all_M.append(state[2])
-             t_rest = 0.0
-             while t_rest < tau and state[0] < D:
-                 state[0] += state[1] * dt
-                 t_total += dt
-             break
  
-         state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
-             throwing_phase(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D)
-         all_t.extend(t_vals)
-         all_x.extend(x_vals)
-         all_v.extend(v_vals)
-         all_a.extend(a_vals)
-         all_M.extend(M_vals)
-                 t_rest += dt
-             continue
+# ------------------------------------------------ 
+# Resting phase
+# ------------------------------------------------
  
-         R = R0 * np.exp(-beta * local_t)
-         if R < R_threshold:
-             break
-         state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
-         t_total += dt
-         local_t += dt
-         if state[0] >= D:
-             break
+def resting_phase(state, t_total, dt, tau, D):
+    t_vals, x_vals, v_vals, a_vals, M_vals = [], [], [], [], []
+    t_rest = 0.0
+    while t_rest < tau:
+        t_vals.append(t_total)
+        x_vals.append(state[0])
+        v_vals.append(state[1])
+        a_vals.append(0.0)
+        M_vals.append(state[2])
+        state[0] += state[1] * dt
+        t_total += dt
+        t_rest += dt
+        if state[0] >= D:
+            break
+    return state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals
  
-         state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
-             resting_phase(state, t_total, dt, tau, D)
-         all_t.extend(t_vals)
-         all_x.extend(x_vals)
-         all_v.extend(v_vals)
-         all_a.extend(a_vals)
-         all_M.extend(M_vals)
+# ------------------------------------------------
+# Full simulation
+# ------------------------------------------------
+
+def simulate_full(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
+def simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
+    t_total = 0.0
+    state = np.array([0.0, 0.0, M0])
+    all_t, all_x, all_v, all_a, all_M = [], [], [], [], []
+    local_t = 0.0
  
-     return np.array(all_t), np.array(all_x), np.array(all_v), np.array(all_a), np.array(all_M)
-     return t_total, state[1]  # total time and final velocity
+    while state[0] < D:
+        if state[2] <= M_dry + 1e-9:
+            while state[0] < D:
+                all_t.append(t_total)
+                all_x.append(state[0])
+                all_v.append(state[1])
+                all_a.append(0.0)
+                all_M.append(state[2])
+            t_rest = 0.0
+            while t_rest < tau and state[0] < D:
+                state[0] += state[1] * dt
+                t_total += dt
+            break
  
- # ------------------------------------------------
- # Fun summary generator
- # ------------------------------------------------
- def generate_fun_summary(days_alone, n_marbles):
+        state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
+            throwing_phase(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D)
+        all_t.extend(t_vals)
+        all_x.extend(x_vals)
+        all_v.extend(v_vals)
+        all_a.extend(a_vals)
+        all_M.extend(M_vals)
+                t_rest += dt
+            continue
  
-     fatigue_opts = [
-         "Chill 🧘‍♂️", "Sweaty 💦", "Delirious 😵", "In a trance 🔮",
-         "Running on dreams 🌈", "Throwing with rage 💢"
-     ]
-     hunger_opts = [
+        R = R0 * np.exp(-beta * local_t)
+        if R < R_threshold:
+            break
+        state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
+        t_total += dt
+        local_t += dt
+        if state[0] >= D:
+            break
+ 
+        state, t_total, t_vals, x_vals, v_vals, a_vals, M_vals = \
+            resting_phase(state, t_total, dt, tau, D)
+        all_t.extend(t_vals)
+        all_x.extend(x_vals)
+        all_v.extend(v_vals)
+        all_a.extend(a_vals)
+        all_M.extend(M_vals)
+ 
+    return np.array(all_t), np.array(all_x), np.array(all_v), np.array(all_a), np.array(all_M)
+    return t_total, state[1]  # total time and final velocity
+ 
+# ------------------------------------------------
+# Fun summary generator
+# ------------------------------------------------
+ 
+def generate_fun_summary(days_alone, n_marbles):
+ 
+    fatigue_opts = [
+        "Chill 🧘‍♂️", "Sweaty 💦", "Delirious 😵", "In a trance 🔮",
+        "Running on dreams 🌈", "Throwing with rage 💢"
+    ]
+    hunger_opts = [
          "Mild Munchies 🍪", "Starving 🌌", "Ate the emergency cheese 🧀",
          "Dreaming of noodles 🍜", "Considering eating a marble 🤔",
          "Drank recycled tears 💧"
