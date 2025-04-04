@@ -2,18 +2,13 @@ import numpy as np
 import random
 
 # ------------------------------------------------
-# Constants
-# ------------------------------------------------
-EARTH_MOON_DISTANCE = 384400  # in km
-
-# ------------------------------------------------
-# Mass calculation from marble count
+# Mass calculation
 # ------------------------------------------------
 def compute_mass_from_marbles(n_marbles, m_per_marble=0.005, M_dry=1000.0):
     return M_dry + n_marbles * m_per_marble
 
 # ------------------------------------------------
-# ODE function for the throwing phase
+# ODEs
 # ------------------------------------------------
 def throwing_odes(t_phase, state, R0, beta, m, u, M_dry):
     R = R0 * np.exp(-beta * t_phase)
@@ -33,13 +28,13 @@ def throwing_odes(t_phase, state, R0, beta, m, u, M_dry):
 # ------------------------------------------------
 def rk4_step(f, t_phase, state, dt, R0, beta, m, u, M_dry):
     k1 = f(t_phase, state, R0, beta, m, u, M_dry)
-    k2 = f(t_phase + 0.5*dt, state + 0.5*dt*k1, R0, beta, m, u, M_dry)
-    k3 = f(t_phase + 0.5*dt, state + 0.5*dt*k2, R0, beta, m, u, M_dry)
-    k4 = f(t_phase + dt, state + dt*k3, R0, beta, m, u, M_dry)
-    return state + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
+    k2 = f(t_phase + 0.5 * dt, state + 0.5 * dt * k1, R0, beta, m, u, M_dry)
+    k3 = f(t_phase + 0.5 * dt, state + 0.5 * dt * k2, R0, beta, m, u, M_dry)
+    k4 = f(t_phase + dt, state + dt * k3, R0, beta, m, u, M_dry)
+    return state + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
 
 # ------------------------------------------------
-# Lightweight simulation (matches original logic)
+# Full simulation: memory-safe
 # ------------------------------------------------
 def simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
     t_total = 0.0
@@ -59,24 +54,24 @@ def simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
         if state[0] >= D:
             break
 
+        # --- Coasting if out of marbles ---
         if state[2] <= M_dry + 1e-9:
-            # --- Coast until Moon ---
             while state[0] < D:
                 state[0] += state[1] * dt
                 t_total += dt
             break
-        else:
-            # --- Rest phase ---
-            t_rest = 0.0
-            while t_rest < tau and state[0] < D:
-                state[0] += state[1] * dt
-                t_total += dt
-                t_rest += dt
+
+        # --- Resting phase (marbles remain) ---
+        t_rest = 0.0
+        while t_rest < tau and state[0] < D:
+            state[0] += state[1] * dt
+            t_total += dt
+            t_rest += dt
 
     return t_total, state[1]
 
 # ------------------------------------------------
-# Fun summary generator
+# Fun summary
 # ------------------------------------------------
 def generate_fun_summary(total_time_sec, n_marbles):
     days_alone = int(total_time_sec // (60 * 60 * 24))
@@ -124,33 +119,28 @@ if __name__ == "__main__":
         print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
 
     if n_marbles < 1000:
-        # Simulation settings
-        D = 384400000    # Target distance (m)
-        dt = 1000        # Timestep (s)
-        R0 = 0.75        # Initial throwing rate (marbles/s)
-        beta = 0.05      # Fatigue decay constant
-        m = 0.005        # Mass per marble (kg)
-        u = 10.0         # Ejection velocity (m/s)
-        M_dry = 1000.0   # Dry mass (kg)
+        D = 384400000  # Moon distance (m)
+        dt = 1000
+        R0 = 0.75
+        beta = 0.05
+        m = 0.005
+        u = 10.0
+        M_dry = 1000.0
         R_threshold = 0.5
-        tau = 30.0       # Resting phase duration (s)
+        tau = 30.0
 
         M0 = compute_mass_from_marbles(n_marbles, m, M_dry)
-
-        total_time, final_velocity = simulate_time_only(
-            D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau
-        )
+        total_time, final_velocity = simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau)
 
         # Format time nicely
         years = int(total_time // (365.25 * 24 * 60 * 60))
         remaining_seconds = total_time % (365.25 * 24 * 60 * 60)
         days = int(remaining_seconds // (24 * 60 * 60))
         remaining_seconds %= (24 * 60 * 60)
-        hours = int(remaining_seconds // (60 * 60))
+        hours = int(remaining_seconds // 3600)
         minutes = int((remaining_seconds % 3600) // 60)
         seconds = int(remaining_seconds % 60)
 
-        # Final output
         print(f"\nTotal time taken to get home: {years} years, {days} days, {hours} hours, {minutes} minutes, {seconds} seconds")
         print(f"\nFinal velocity reached: {final_velocity:.2f} m/s")
 
