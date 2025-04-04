@@ -193,7 +193,8 @@ if __name__ == "__main__":
  
     print("\n🎬 Animation available below.")
 try:
-    n_marbles = int(user_marble_count) except:
+    n_marbles = int(user_marble_count) 
+except:
     n_marbles = 10
     print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
  
