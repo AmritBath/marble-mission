@@ -39,51 +39,41 @@ def rk4_step(f, t_phase, state, dt, R0, beta, m, u, M_dry):
     return state + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
 
 # ------------------------------------------------
-# Throwing phase (minimal version)
-# ------------------------------------------------
-def throwing_phase_min(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D):
-    local_t = 0.0
-    while True:
-        R = R0 * np.exp(-beta * local_t)
-        if R < R_threshold or state[2] <= M_dry + 1e-9 or state[0] >= D:
-            break
-        state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
-        local_t += dt
-        t_total += dt
-    return state, t_total
-
-# ------------------------------------------------
-# Resting phase (minimal version)
-# ------------------------------------------------
-def resting_phase_min(state, t_total, dt, tau, D):
-    t_rest = 0.0
-    while t_rest < tau and state[0] < D:
-        state[0] += state[1] * dt
-        t_total += dt
-        t_rest += dt
-    return state, t_total
-
-# ------------------------------------------------
-# Full simulation (lightweight)
+# Lightweight simulation (matches original logic)
 # ------------------------------------------------
 def simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau):
     t_total = 0.0
-    state = np.array([0.0, 0.0, M0])  # x, v, M
+    state = np.array([0.0, 0.0, M0])  # [x, v, M]
 
     while state[0] < D:
-        if state[2] <= M_dry + 1e-9:
-            # Only coast during rest phase now
-            state, t_total = resting_phase_min(state, t_total, dt, tau, D)
-            break
-
-        state, t_total = throwing_phase_min(state, t_total, dt, R0, beta, m, u, M_dry, R_threshold, D)
+        # --- Throwing phase ---
+        local_t = 0.0
+        while True:
+            R = R0 * np.exp(-beta * local_t)
+            if R < R_threshold or state[2] <= M_dry + 1e-9 or state[0] >= D:
+                break
+            state = rk4_step(throwing_odes, local_t, state, dt, R0, beta, m, u, M_dry)
+            local_t += dt
+            t_total += dt
 
         if state[0] >= D:
             break
 
-        state, t_total = resting_phase_min(state, t_total, dt, tau, D)
+        if state[2] <= M_dry + 1e-9:
+            # --- Coast until Moon ---
+            while state[0] < D:
+                state[0] += state[1] * dt
+                t_total += dt
+            break
+        else:
+            # --- Rest phase ---
+            t_rest = 0.0
+            while t_rest < tau and state[0] < D:
+                state[0] += state[1] * dt
+                t_total += dt
+                t_rest += dt
 
-    return t_total, state[1]  # Total time, final velocity
+    return t_total, state[1]
 
 # ------------------------------------------------
 # Fun summary generator
@@ -134,23 +124,38 @@ if __name__ == "__main__":
         print("No valid user_marble_count passed in. Using default of 10 marbles.\n")
 
     if n_marbles < 1000:
-        D = 384400000    # Target distance in metres
-        dt = 2000         # Increased timestep for speed and stability
-        R0 = 0.75
-        beta = 0.05
-        m = 0.005
-        u = 10.0
-        M_dry = 1000.0
+        # Simulation settings
+        D = 384400000    # Target distance (m)
+        dt = 1000        # Timestep (s)
+        R0 = 0.75        # Initial throwing rate (marbles/s)
+        beta = 0.05      # Fatigue decay constant
+        m = 0.005        # Mass per marble (kg)
+        u = 10.0         # Ejection velocity (m/s)
+        M_dry = 1000.0   # Dry mass (kg)
         R_threshold = 0.5
-        tau = 30.0
+        tau = 30.0       # Resting phase duration (s)
 
         M0 = compute_mass_from_marbles(n_marbles, m, M_dry)
-        total_time, final_velocity = simulate_time_only(D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau)
 
-        print(f"\nTotal time taken to get home: {total_time:.2f} seconds")
+        total_time, final_velocity = simulate_time_only(
+            D, dt, R0, beta, m, u, M0, M_dry, R_threshold, tau
+        )
+
+        # Format time nicely
+        years = int(total_time // (365.25 * 24 * 60 * 60))
+        remaining_seconds = total_time % (365.25 * 24 * 60 * 60)
+        days = int(remaining_seconds // (24 * 60 * 60))
+        remaining_seconds %= (24 * 60 * 60)
+        hours = int(remaining_seconds // (60 * 60))
+        minutes = int((remaining_seconds % 3600) // 60)
+        seconds = int(remaining_seconds % 60)
+
+        # Final output
+        print(f"\nTotal time taken to get home: {years} years, {days} days, {hours} hours, {minutes} minutes, {seconds} seconds")
         print(f"\nFinal velocity reached: {final_velocity:.2f} m/s")
 
         generate_fun_summary(total_time, n_marbles)
         print("\n🎬 Animation available below.")
+
     else:
         print(f"Too many marbles ({n_marbles})! Simulation skipped to avoid browser crash.")
